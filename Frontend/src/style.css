@@ -1,4 +1,4 @@
-@use "./style/button.scss";
+@import "./style/button.css";
 
 * {
     margin: 0%;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import '../style/interview.scss'
+import './interview.css'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate, useParams } from 'react-router'
 
@@ -12,19 +12,27 @@ const NAV_ITEMS = [
 ]
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-const QuestionCard = ({ item, index }) => {
+const QuestionCard = ({ item, index, type }) => {
     const [ open, setOpen ] = useState(false)
+    const answerId = `${type}-answer-${index}`
+
     return (
-        <div className='q-card'>
-            <div className='q-card__header' onClick={() => setOpen(o => !o)}>
+        <article className={`q-card ${open ? 'q-card--open' : ''}`}>
+            <button
+                type='button'
+                className='q-card__header'
+                aria-expanded={open}
+                aria-controls={answerId}
+                onClick={() => setOpen(o => !o)}
+            >
                 <span className='q-card__index'>Q{index + 1}</span>
                 <p className='q-card__question'>{item.question}</p>
                 <span className={`q-card__chevron ${open ? 'q-card__chevron--open' : ''}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
                 </span>
-            </div>
+            </button>
             {open && (
-                <div className='q-card__body'>
+                <div className='q-card__body' id={answerId}>
                     <div className='q-card__section'>
                         <span className='q-card__tag q-card__tag--intention'>Intention</span>
                         <p>{item.intention}</p>
@@ -35,7 +43,7 @@ const QuestionCard = ({ item, index }) => {
                     </div>
                 </div>
             )}
-        </div>
+        </article>
     )
 }
 
@@ -61,6 +69,7 @@ const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
+    const navigate = useNavigate()
 
     useEffect(() => {
         if (interviewId) {
@@ -85,6 +94,22 @@ const Interview = () => {
 
     return (
         <div className='interview-page'>
+            <header className='interview-heading'>
+                <button className='interview-back' type='button' onClick={() => navigate('/')}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /><path d="M20 12H9" /></svg>
+                    All plans
+                </button>
+                <div className='interview-heading__copy'>
+                    <span className='interview-heading__eyebrow'>YOUR PERSONALIZED PREPARATION PLAN</span>
+                    <h1>{report.title || 'Interview Plan'}</h1>
+                    <p>Review your tailored questions, model answers, and preparation roadmap.</p>
+                </div>
+                <div className='interview-heading__total'>
+                    <span>{report.technicalQuestions.length + report.behavioralQuestions.length}</span>
+                    <small>questions</small>
+                </div>
+            </header>
+
             <div className='interview-layout'>
 
                 {/* ── Left Nav ── */}
@@ -94,6 +119,8 @@ const Interview = () => {
                         {NAV_ITEMS.map(item => (
                             <button
                                 key={item.id}
+                                type='button'
+                                aria-pressed={activeNav === item.id}
                                 className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
                                 onClick={() => setActiveNav(item.id)}
                             >
@@ -117,13 +144,18 @@ const Interview = () => {
                     {activeNav === 'technical' && (
                         <section>
                             <div className='content-header'>
-                                <h2>Technical Questions</h2>
+                                <div>
+                                    <h2>Technical Questions</h2>
+                                    <p>Role-specific questions based on the skills and requirements in your resume.</p>
+                                </div>
                                 <span className='content-header__count'>{report.technicalQuestions.length} questions</span>
                             </div>
                             <div className='q-list'>
-                                {report.technicalQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
-                                ))}
+                                {report.technicalQuestions.length > 0
+                                    ? report.technicalQuestions.map((q, i) => (
+                                        <QuestionCard key={i} item={q} index={i} type='technical' />
+                                    ))
+                                    : <p className='interview-empty'>No technical questions were generated for this plan.</p>}
                             </div>
                         </section>
                     )}
@@ -131,13 +163,18 @@ const Interview = () => {
                     {activeNav === 'behavioral' && (
                         <section>
                             <div className='content-header'>
-                                <h2>Behavioral Questions</h2>
+                                <div>
+                                    <h2>Behavioral Questions</h2>
+                                    <p>Practice explaining your experience, decisions, and impact with confidence.</p>
+                                </div>
                                 <span className='content-header__count'>{report.behavioralQuestions.length} questions</span>
                             </div>
                             <div className='q-list'>
-                                {report.behavioralQuestions.map((q, i) => (
-                                    <QuestionCard key={i} item={q} index={i} />
-                                ))}
+                                {report.behavioralQuestions.length > 0
+                                    ? report.behavioralQuestions.map((q, i) => (
+                                        <QuestionCard key={i} item={q} index={i} type='behavioral' />
+                                    ))
+                                    : <p className='interview-empty'>No behavioral questions were generated for this plan.</p>}
                             </div>
                         </section>
                     )}
@@ -145,7 +182,10 @@ const Interview = () => {
                     {activeNav === 'roadmap' && (
                         <section>
                             <div className='content-header'>
-                                <h2>Preparation Road Map</h2>
+                                <div>
+                                    <h2>Preparation Road Map</h2>
+                                    <p>A focused, day-by-day plan to help you prepare for the role.</p>
+                                </div>
                                 <span className='content-header__count'>{report.preparationPlan.length}-day plan</span>
                             </div>
                             <div className='roadmap-list'>

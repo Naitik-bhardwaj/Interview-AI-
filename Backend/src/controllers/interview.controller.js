@@ -10,27 +10,70 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
 
-    const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
-    const { selfDescription, jobDescription } = req.body
+    try {
+        const jobDescription = (req.body.jobDescription || "").trim()
+        const selfDescription = (req.body.selfDescription || "").trim()
 
-    const interViewReportByAi = await generateInterviewReport({
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription
-    })
+        if (!jobDescription) {
+            return res.status(400).json({
+                message: "Job description is required"
+            })
+        }
 
-    const interviewReport = await interviewReportModel.create({
-        user: req.user.id,
-        resume: resumeContent.text,
-        selfDescription,
-        jobDescription,
-        ...interViewReportByAi
-    })
+        let resumeText = ""
 
-    res.status(201).json({
-        message: "Interview report generated successfully.",
-        interviewReport
-    })
+        if (req.file) {
+            const isPdf = req.file.mimetype === "application/pdf" || req.file.originalname?.toLowerCase().endsWith(".pdf")
+
+            if (!isPdf) {
+                return res.status(400).json({
+                    message: "Resume must be a PDF file"
+                })
+            }
+
+            const parser = new pdfParse.PDFParse({ data: req.file.buffer })
+            const resumeContent = await parser.getText()
+            await parser.destroy()
+            resumeText = (resumeContent.text || "").trim()
+        }
+
+        if (!resumeText && !selfDescription) {
+            return res.status(400).json({
+                message: "Upload a PDF resume or add a self description"
+            })
+        }
+
+        const interViewReportByAi = await generateInterviewReport({
+            resume: resumeText,
+            selfDescription,
+            jobDescription
+        })
+
+        const interviewReport = await interviewReportModel.create({
+            user: req.user.id,
+            resume: resumeText,
+            selfDescription,
+            jobDescription,
+            ...interViewReportByAi
+        })
+
+        res.status(201).json({
+            message: "Interview report generated successfully.",
+            interviewReport
+        })
+    } catch (err) {
+        console.error(err)
+
+        if (err.name === "ValidationError") {
+            return res.status(400).json({
+                message: err.message
+            })
+        }
+
+        res.status(500).json({
+            message: "Could not generate the interview report"
+        })
+    }
 
 }
 
