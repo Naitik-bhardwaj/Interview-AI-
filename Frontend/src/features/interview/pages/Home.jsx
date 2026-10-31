@@ -2,24 +2,56 @@ import React, { useState, useRef } from 'react'
 import './home.css'
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../../auth/hooks/useAuth.js'
 
 const Home = () => {
 
     const { loading, generateReport,reports } = useInterview()
+    const { user, handleLogout } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
     const [ error, setError ] = useState("")
+    const [ generationInProgress, setGenerationInProgress ] = useState(false)
+    const [ logoutInProgress, setLogoutInProgress ] = useState(false)
+    const [ resumeName, setResumeName ] = useState("")
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
+
+    const handleSignOut = async () => {
+        setError("")
+        setLogoutInProgress(true)
+        try {
+            await handleLogout()
+            navigate('/login', { replace: true })
+        } catch (logoutError) {
+            setError(logoutError.response?.data?.message || "Could not log out. Please try again.")
+        } finally {
+            setLogoutInProgress(false)
+        }
+    }
 
     const handleGenerateReport = async () => {
         const resumeFile = resumeInputRef.current?.files?.[ 0 ]
         const trimmedJobDescription = jobDescription.trim()
         const trimmedSelfDescription = selfDescription.trim()
 
+        if (generationInProgress) {
+            return
+        }
+
         if (!trimmedJobDescription) {
             setError("Job description is required.")
+            return
+        }
+
+        if (resumeFile && resumeFile.type !== "application/pdf" && !resumeFile.name.toLowerCase().endsWith(".pdf")) {
+            setError("Please upload your resume as a PDF.")
+            return
+        }
+
+        if (resumeFile && resumeFile.size > 3 * 1024 * 1024) {
+            setError("Your PDF must be smaller than 3 MB.")
             return
         }
 
@@ -29,6 +61,7 @@ const Home = () => {
         }
 
         setError("")
+        setGenerationInProgress(true)
 
         try {
             const data = await generateReport({
@@ -45,10 +78,12 @@ const Home = () => {
             navigate(`/interview/${data._id}`)
         } catch (err) {
             setError(err.message || "Could not generate the interview plan.")
+        } finally {
+            setGenerationInProgress(false)
         }
     }
 
-    if (loading) {
+    if (loading && !generationInProgress) {
         return (
             <main className='loading-screen'>
                 <h1>Loading your interview plan...</h1>
@@ -58,6 +93,19 @@ const Home = () => {
 
     return (
         <div className='home-page'>
+            <nav className='home-account-bar' aria-label='Account'>
+                <span className='home-account-bar__greeting'>
+                    Signed in as <strong>{user?.username || user?.email || 'candidate'}</strong>
+                </span>
+                <button
+                    className='home-logout-button'
+                    type='button'
+                    onClick={handleSignOut}
+                    disabled={logoutInProgress || generationInProgress}
+                >
+                    {logoutInProgress ? 'Logging out...' : 'Log out'}
+                </button>
+            </nav>
 
             {/* Page Header */}
             <header className='page-header'>
@@ -80,7 +128,10 @@ const Home = () => {
                             <span className='badge badge--required'>Required</span>
                         </div>
                         <textarea
-                            onChange={(e) => { setJobDescription(e.target.value) }}
+                            onChange={(e) => {
+                                setJobDescription(e.target.value)
+                                setError("")
+                            }}
                             className='panel__textarea'
                             placeholder={`Paste the full job description here...\ne.g. 'Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design...'`}
                             maxLength={5000}
@@ -110,9 +161,20 @@ const Home = () => {
                                 <span className='dropzone__icon'>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
                                 </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
+                                <p className='dropzone__title'>{resumeName || 'Click to upload a resume'}</p>
                                 <p className='dropzone__subtitle'>PDF only (Max 3MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+                                <input
+                                    ref={resumeInputRef}
+                                    hidden
+                                    type='file'
+                                    id='resume'
+                                    name='resume'
+                                    accept='.pdf,application/pdf'
+                                    onChange={(event) => {
+                                        setResumeName(event.target.files?.[0]?.name || "")
+                                        setError("")
+                                    }}
+                                />
                             </label>
                         </div>
 
@@ -123,7 +185,10 @@ const Home = () => {
                         <div className='self-description'>
                             <label className='section-label' htmlFor='selfDescription'>Quick Self-Description</label>
                             <textarea
-                                onChange={(e) => { setSelfDescription(e.target.value) }}
+                                onChange={(e) => {
+                                    setSelfDescription(e.target.value)
+                                    setError("")
+                                }}
                                 id='selfDescription'
                                 name='selfDescription'
                                 className='panel__textarea panel__textarea--short'
@@ -143,13 +208,17 @@ const Home = () => {
 
                 {/* Card Footer */}
                 <div className='interview-card__footer'>
-                    {error && <p className='form-error'>{error}</p>}
-                    <span className='footer-info'>AI-Powered Strategy Generation &bull; Approx 30s</span>
+                    {error && <p className='form-error' role='alert'>{error}</p>}
+                    {!generationInProgress && <span className='footer-info'>AI-Powered Strategy Generation &bull; Usually takes under a minute</span>}
                     <button
                         onClick={handleGenerateReport}
-                        className='generate-btn'>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg>
-                        Generate My Interview Strategy
+                        className='generate-btn'
+                        type='button'
+                        disabled={generationInProgress || logoutInProgress}
+                        aria-busy={generationInProgress}>
+                        {generationInProgress
+                            ? <><span className='generate-spinner' aria-hidden='true' /> Creating your personalized plan...</>
+                            : <><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" /></svg> Generate My Interview Strategy</>}
                     </button>
                 </div>
             </div>

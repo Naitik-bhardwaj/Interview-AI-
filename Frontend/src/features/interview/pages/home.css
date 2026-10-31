@@ -42,6 +42,59 @@
     right: -260px;
 }
 
+.home-account-bar {
+    display: flex;
+    width: min(100%, 1120px);
+    align-items: center;
+    justify-content: flex-end;
+    gap: 14px;
+    margin: -38px auto 34px;
+}
+
+.home-account-bar__greeting {
+    overflow: hidden;
+    color: var(--home-muted);
+    font-size: 0.75rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-account-bar__greeting strong {
+    color: #e7e9ef;
+    font-weight: 650;
+}
+
+.home-logout-button {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    border: 1px solid var(--home-border);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+    color: #d7dbe4;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 600;
+    transition: border-color 150ms ease, color 150ms ease, background 150ms ease;
+}
+
+.home-logout-button:hover:not(:disabled) {
+    border-color: rgba(237, 61, 115, 0.38);
+    background: rgba(237, 61, 115, 0.09);
+    color: #ff91ad;
+}
+
+.home-logout-button:focus-visible {
+    outline: 2px solid #ff91ad;
+    outline-offset: 3px;
+}
+
+.home-logout-button:disabled,
+.generate-btn:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
 .page-header,
 .interview-card,
 .recent-reports,
@@ -371,6 +424,22 @@
     outline-offset: 3px;
 }
 
+.generate-spinner {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 auto;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: generate-spin 700ms linear infinite;
+}
+
+@keyframes generate-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .form-error {
     flex: 1;
     color: #ff91a7;
@@ -496,6 +565,11 @@
         padding: 54px 18px 22px;
     }
 
+    .home-account-bar {
+        margin-top: -28px;
+        margin-bottom: 27px;
+    }
+
     .page-header {
         margin-bottom: 27px;
     }
@@ -535,6 +609,19 @@
 @media (max-width: 480px) {
     .home-page {
         padding-inline: 13px;
+    }
+
+    .home-account-bar {
+        gap: 8px;
+    }
+
+    .home-account-bar__greeting {
+        font-size: 0.67rem;
+    }
+
+    .home-logout-button {
+        padding: 7px 9px;
+        font-size: 0.68rem;
     }
 
     .page-header > p {
@@ -585,5 +672,9 @@
     .report-item,
     .page-footer a {
         transition: none;
+    }
+
+    .generate-spinner {
+        animation-duration: 1400ms;
     }
 }
