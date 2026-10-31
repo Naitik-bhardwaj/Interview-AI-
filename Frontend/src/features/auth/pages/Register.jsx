@@ -1,5 +1,6 @@
 import React,{useState} from 'react'
 import { useNavigate, Link } from 'react-router'
+import "../auth.form.css"
 import { useAuth } from '../hooks/useAuth'
 
 const Register = () => {
@@ -8,13 +9,19 @@ const Register = () => {
     const [ username, setUsername ] = useState("")
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState("")
 
     const {loading,handleRegister} = useAuth()
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password})
-        navigate("/")
+        setError("")
+        try {
+            await handleRegister({ username, email, password })
+            navigate("/")
+        } catch (err) {
+            setError(err.response?.data?.message || "Registration failed. Please try again.")
+        }
     }
 
     if(loading){
@@ -51,6 +58,7 @@ const Register = () => {
 
                 </form>
 
+                {error && <p className="auth-error" role="alert">{error}</p>}
                 <p>Already have an account? <Link to={"/login"} >Login</Link> </p>
             </div>
         </main>

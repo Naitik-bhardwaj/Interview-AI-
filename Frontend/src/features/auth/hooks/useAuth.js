@@ -15,8 +15,6 @@ export const useAuth = () => {
         try {
             const data = await login({ email, password })
             setUser(data.user)
-        } catch (err) {
-
         } finally {
             setLoading(false)
         }
@@ -27,8 +25,6 @@ export const useAuth = () => {
         try {
             const data = await register({ username, email, password })
             setUser(data.user)
-        } catch (err) {
-
         } finally {
             setLoading(false)
         }
@@ -37,10 +33,8 @@ export const useAuth = () => {
     const handleLogout = async () => {
         setLoading(true)
         try {
-            const data = await logout()
+            await logout()
             setUser(null)
-        } catch (err) {
-
         } finally {
             setLoading(false)
         }
@@ -50,17 +44,20 @@ export const useAuth = () => {
 
         const getAndSetUser = async () => {
             try {
-
                 const data = await getMe()
                 setUser(data.user)
-            } catch (err) { } finally {
+            } catch (error) {
+                if (error.response?.status !== 401) {
+                    console.error("Could not restore the signed-in user:", error)
+                }
+            } finally {
                 setLoading(false)
             }
         }
 
         getAndSetUser()
 
-    }, [])
+    }, [ setLoading, setUser ])
 
     return { user, loading, handleRegister, handleLogin, handleLogout }
 }

@@ -40,3 +40,8 @@ main a {
     color: #e1034d;
     text-decoration: none;
 }
+
+main .auth-error {
+    color: #ff8296;
+    font-size: 0.875rem;
+}
