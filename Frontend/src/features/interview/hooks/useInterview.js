@@ -23,7 +23,12 @@ export const useInterview = () => {
             setReport(response.interviewReport)
             return response.interviewReport
         } catch (error) {
-            const message = error.response?.data?.message || "Could not generate the interview plan."
+            const message = error.response?.data?.message
+                || (error.response?.status === 404
+                    ? "The API route was not found (404). Redeploy Vercel with the API rewrite configuration."
+                    : error.response
+                        ? `The server returned an error (${error.response.status}).`
+                        : error.message || "Could not generate the interview plan.")
             throw new Error(message)
         } finally {
             setLoading(false)
@@ -37,11 +42,12 @@ export const useInterview = () => {
             response = await getInterviewReportById(interviewId)
             setReport(response.interviewReport)
         } catch (error) {
-            console.log(error)
+            console.error("Could not load the interview plan:", error)
+            return null
         } finally {
             setLoading(false)
         }
-        return response.interviewReport
+        return response?.interviewReport ?? null
     }
 
     const getReports = async () => {
@@ -51,12 +57,14 @@ export const useInterview = () => {
             response = await getAllInterviewReports()
             setReports(response.interviewReports)
         } catch (error) {
-            console.log(error)
+            console.error("Could not load interview plans:", error)
+            setReports([])
+            return []
         } finally {
             setLoading(false)
         }
 
-        return response.interviewReports
+        return response?.interviewReports ?? []
     }
 
     const getResumePdf = async (interviewReportId) => {
